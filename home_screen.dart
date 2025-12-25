@@ -6,6 +6,9 @@ import 'results_screen.dart';
 import 'points_screen.dart';
 
 class HomeScreen extends StatelessWidget {
+  final bool isAdmin; // Admin vs Guest
+  HomeScreen({this.isAdmin = false});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -88,15 +91,30 @@ class HomeScreen extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         if (title == "Events") {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => EventsScreen()));
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => EventsScreen(isAdmin: isAdmin)),
+          );
         } else if (title == "Teams") {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => TeamsScreen()));
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => TeamsScreen(isAdmin: isAdmin)),
+          );
         } else if (title == "Schedule") {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => ScheduleScreen()));
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => ScheduleScreen(isAdmin: isAdmin)),
+          );
         } else if (title == "Results") {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => ResultsScreen()));
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => ResultsScreen(isAdmin: isAdmin)),
+          );
         } else {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => PointsScreen()));
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => PointsScreen(isAdmin: isAdmin)),
+          );
         }
       },
       child: Container(
@@ -136,6 +154,29 @@ class HomeScreen extends StatelessWidget {
                 color: Colors.black87,
               ),
             ),
+
+            SizedBox(height: 10),
+
+            // Admin-only Edit button
+            if (isAdmin)
+              ElevatedButton(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text("Admin can edit $title!")),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.pinkAccent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+                child: Text(
+                  "Edit",
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                ),
+              ),
           ],
         ),
       ),
