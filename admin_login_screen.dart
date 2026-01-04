@@ -2,140 +2,190 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'home_screen.dart';
 
-class AdminLoginScreen extends StatelessWidget {
+class AdminLoginScreen extends StatefulWidget {
+  const AdminLoginScreen({super.key});
+
+  @override
+  State<AdminLoginScreen> createState() => _AdminLoginScreenState();
+}
+
+class _AdminLoginScreenState extends State<AdminLoginScreen> {
   final TextEditingController email = TextEditingController();
   final TextEditingController password = TextEditingController();
+  bool _isLoading = false;
 
   void login(BuildContext context) async {
+    if (email.text.isEmpty || password.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill all fields")),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
     try {
-      UserCredential user = await FirebaseAuth.instance.signInWithEmailAndPassword(
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: email.text.trim(),
         password: password.text.trim(),
       );
 
-      // Login successful → Home Screen
+      if (!mounted) return;
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => HomeScreen()),
+        MaterialPageRoute(builder: (_) => HomeScreen(isAdmin: true)),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Login failed. Please check your email/password.")),
+        const SnackBar(content: Text("Invalid credentials, please try again.")),
       );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFF1D2671), // Solid Deep Blue Background
       body: Container(
         width: double.infinity,
-        decoration: BoxDecoration(
+        height: double.infinity,
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
             colors: [
-              Color(0xFFC33764), // pink
-              Color(0xFF5A3FCD), // purple
-              Color(0xFF1D2671), // blue
+              Color(0xFF1D2671),
+              Color(0xFF3949AB),
             ],
           ),
         ),
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
-              padding: EdgeInsets.symmetric(horizontal: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 30),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-
-                  Icon(Icons.admin_panel_settings, size: 70, color: Colors.white),
-
-                  SizedBox(height: 20),
-
-                  Text(
-                    "Admin Login",
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
+                  // 🔹 Top Icon Header
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.lock_person_rounded,
+                      size: 70,
                       color: Colors.white,
-                      letterSpacing: 1.2,
                     ),
                   ),
 
-                  SizedBox(height: 40),
+                  const SizedBox(height: 25),
 
-                  // Email TextField
-                  TextField(
+                  const Text(
+                    "Admin Portal",
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                  const Text(
+                    "Sign in to access management tools",
+                    style: TextStyle(color: Colors.white60, fontSize: 14),
+                  ),
+
+                  const SizedBox(height: 50),
+
+                  // 🔹 Login Fields
+                  _buildTextField(
+                    label: "Admin Email",
                     controller: email,
-                    style: TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      labelText: "Email",
-                      labelStyle: TextStyle(color: Colors.white70),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.white70),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.white),
-                      ),
-                    ),
+                    icon: Icons.alternate_email_rounded,
+                    isPass: false,
                   ),
-
-                  SizedBox(height: 20),
-
-                  // Password TextField
-                  TextField(
+                  const SizedBox(height: 20),
+                  _buildTextField(
+                    label: "Password",
                     controller: password,
-                    obscureText: true,
-                    style: TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      labelText: "Password",
-                      labelStyle: TextStyle(color: Colors.white70),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.white70),
+                    icon: Icons.lock_outline_rounded,
+                    isPass: true,
+                  ),
+
+                  const SizedBox(height: 40),
+
+                  // 🔹 Login Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 55,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : () => login(context),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: const Color(0xFF1D2671),
+                        elevation: 5,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: Colors.white),
+                      child: _isLoading
+                          ? const CircularProgressIndicator(color: Color(0xFF1D2671))
+                          : const Text(
+                        "LOGIN",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.1,
+                        ),
                       ),
                     ),
                   ),
 
-                  SizedBox(height: 30),
+                  const SizedBox(height: 20),
 
-                  ElevatedButton(
-                    onPressed: () => login(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.pinkAccent,
-                      padding: EdgeInsets.symmetric(horizontal: 50, vertical: 15),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text(
-                      "Login",
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-
-                  SizedBox(height: 20),
-
+                  // 🔹 Back Button
                   TextButton(
-                    onPressed: () {
-                      Navigator.pop(context); // back to role selection
-                    },
-                    child: Text(
-                      "Back",
-                      style: TextStyle(color: Colors.white70, fontSize: 16),
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text(
+                      "Go Back",
+                      style: TextStyle(color: Colors.white70, fontSize: 15),
                     ),
                   ),
                 ],
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  // 🔹 Modern Textfield Widget
+  Widget _buildTextField({
+    required String label,
+    required TextEditingController controller,
+    required IconData icon,
+    required bool isPass,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
+      ),
+      child: TextField(
+        controller: controller,
+        obscureText: isPass,
+        style: const TextStyle(color: Colors.white),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: const TextStyle(color: Colors.white60),
+          prefixIcon: Icon(icon, color: Colors.white60),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 18),
         ),
       ),
     );
