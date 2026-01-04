@@ -3,171 +3,203 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class EventsScreen extends StatefulWidget {
   final bool isAdmin;
-  EventsScreen({this.isAdmin = false});
+  const EventsScreen({super.key, required this.isAdmin});
 
   @override
-  _EventsScreenState createState() => _EventsScreenState();
+  State<EventsScreen> createState() => _EventsScreenState();
 }
 
 class _EventsScreenState extends State<EventsScreen> {
-  final CollectionReference events =
-  FirebaseFirestore.instance.collection('events');
+  final CollectionReference _eventsCollection = FirebaseFirestore.instance.collection('events');
 
-  String selectedSport = ""; // default filter
-  final List<String> sports = ["Football", "Basketball", "Volleyball"];
+  // 🔹 Default Category Selection
+  String selectedTab = "Boys";
 
-  bool showSidePanel = false; // toggle side panel
+  // 🔹 Function to Show Add/Update Dialog
+  void _showEventDialog({DocumentSnapshot? document}) {
+    TextEditingController nameController = TextEditingController();
+    TextEditingController venueController = TextEditingController();
+    String category = selectedTab; // Dialog khulte waqt wahi category select hogi jo bahar hai
+
+    if (document != null) {
+      nameController.text = document['name'];
+      venueController.text = document['venue'];
+      category = document['category'];
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text(document == null ? "Add New Event" : "Update Event"),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: "Event Name", border: OutlineInputBorder()),
+                ),
+                const SizedBox(height: 15),
+                DropdownButtonFormField<String>(
+                  value: category,
+                  decoration: const InputDecoration(labelText: "Category", border: OutlineInputBorder()),
+                  items: ['Boys', 'Girls'].map((val) => DropdownMenuItem(value: val, child: Text(val))).toList(),
+                  onChanged: (val) => setDialogState(() => category = val!),
+                ),
+                const SizedBox(height: 15),
+                TextField(
+                  controller: venueController,
+                  decoration: const InputDecoration(labelText: "Venue", border: OutlineInputBorder()),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: const Text("Cancel")),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1D2671)),
+              onPressed: () async {
+                if (nameController.text.isNotEmpty && venueController.text.isNotEmpty) {
+                  Map<String, dynamic> eventData = {
+                    'name': nameController.text,
+                    'category': category,
+                    'venue': venueController.text,
+                    'timestamp': FieldValue.serverTimestamp(),
+                  };
+
+                  if (document == null) {
+                    await _eventsCollection.add(eventData);
+                  } else {
+                    await _eventsCollection.doc(document.id).update(eventData);
+                  }
+                  if (!mounted) return;
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text("Save", style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    const Color primaryBlue = Color(0xFF1D2671);
+
     return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FD),
       appBar: AppBar(
-        title: Text("Events"),
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                Colors.pink.shade400,        // pink
-                Color(0xFF8A2BE2),           // purplish blue
+        title: const Text("Events", style: TextStyle(fontWeight: FontWeight.bold)),
+        centerTitle: true,
+      ),
+      floatingActionButton: widget.isAdmin
+          ? FloatingActionButton(
+        backgroundColor: primaryBlue,
+        child: const Icon(Icons.add, color: Colors.white),
+        onPressed: () => _showEventDialog(),
+      )
+          : null,
+      body: Column(
+        children: [
+          // 🔹 CATEGORY TOGGLE BUTTONS (SIDE BY SIDE)
+          Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(15),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
+            ),
+            child: Row(
+              children: [
+                _buildToggleButton("Boys"),
+                _buildToggleButton("Girls"),
               ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
             ),
           ),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.menu),
-            onPressed: () {
-              setState(() {
-                showSidePanel = !showSidePanel;
-              });
-            },
+
+          // 🔹 FILTERED EVENTS LIST
+          Expanded(
+            child: StreamBuilder(
+              // Query mein category filter laga diya hai
+              stream: _eventsCollection
+                  .where('category', isEqualTo: selectedTab)
+                  .snapshots(),
+              builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return Center(child: Text("No $selectedTab Events Found"));
+                }
+
+                return ListView.builder(
+                  itemCount: snapshot.data!.docs.length,
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemBuilder: (context, index) {
+                    var doc = snapshot.data!.docs[index];
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: ListTile(
+                        leading: const CircleAvatar(
+                          backgroundColor: Color(0xFFE8EAF6),
+                          child: Icon(Icons.sports_baseball, color: primaryBlue),
+                        ),
+                        title: Text(doc['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text("Venue: ${doc['venue']}"),
+                        trailing: widget.isAdmin
+                            ? Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                                icon: const Icon(Icons.edit, color: Colors.blue, size: 20),
+                                onPressed: () => _showEventDialog(document: doc)),
+                            IconButton(
+                                icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                                onPressed: () => _eventsCollection.doc(doc.id).delete()),
+                          ],
+                        )
+                            : null,
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
           ),
         ],
       ),
-      body: Stack(
-        children: [
-          // 🔹 Main Event List
-          Column(
-            children: [
-              if (widget.isAdmin)
-                Padding(
-                  padding: EdgeInsets.all(8),
-                  child: ElevatedButton.icon(
-                    onPressed: () async {
-                      await events.add({
-                        'name': 'New Event',
-                        'sport': 'Football',
-                      });
-                    },
-                    icon: Icon(Icons.add),
-                    label: Text("Add Event"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.pink.shade400,
-                    ),
-                  ),
-                ),
-              Expanded(
-                child: StreamBuilder<QuerySnapshot>(
-                  stream: events.snapshots(),
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData)
-                      return Center(child: CircularProgressIndicator());
-                    final docs = snapshot.data!.docs;
+    );
+  }
 
-                    // Filter based on selectedSport
-                    final filteredDocs = selectedSport == "All"
-                        ? docs
-                        : docs.where((doc) {
-                      final data =
-                      doc.data() as Map<String, dynamic>;
-                      return data['sport'] == selectedSport;
-                    }).toList();
-
-                    return ListView.builder(
-                      itemCount: filteredDocs.length,
-                      itemBuilder: (context, index) {
-                        final data =
-                        filteredDocs[index].data() as Map<String, dynamic>;
-                        return ListTile(
-                          title: Text(data['name'] ?? ''),
-                          subtitle: Text(data['sport'] ?? ''),
-                          trailing: widget.isAdmin
-                              ? IconButton(
-                            icon: Icon(Icons.delete, color: Colors.red),
-                            onPressed: () {
-                              events.doc(filteredDocs[index].id).delete();
-                            },
-                          )
-                              : null,
-                        );
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
+  // 🔹 Helper Widget for Side-by-Side Buttons
+  Widget _buildToggleButton(String title) {
+    bool isSelected = selectedTab == title;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => selectedTab = title),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFF1D2671) : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
           ),
-
-          // 🔹 Side Panel
-          if (showSidePanel)
-            Positioned(
-              right: 0,
-              top: 0,
-              bottom: 0,
-              width: MediaQuery.of(context).size.width * 0.6,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.pink.shade200,
-                      Colors.pink.shade400,
-                    ],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.pink.shade300.withOpacity(0.5),
-                      blurRadius: 8,
-                      offset: Offset(-2, 0),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding:
-                      const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-                      child: Text(
-                        "Filter by Sport",
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    Divider(color: Colors.white70),
-                    ...sports.map((sport) => ListTile(
-                      title: Text(
-                        sport,
-                        style: TextStyle(color: Colors.white),
-                      ),
-                      onTap: () {
-                        setState(() {
-                          selectedSport = sport;
-                          showSidePanel = false; // close panel
-                        });
-                      },
-                    )),
-                  ],
-                ),
+          child: Center(
+            child: Text(
+              "$title Matches",
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.black54,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
             ),
-        ],
+          ),
+        ),
       ),
     );
   }
