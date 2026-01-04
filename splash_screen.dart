@@ -3,19 +3,20 @@ import 'dart:async';
 import 'role_selection_screen.dart';
 
 class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
   @override
   _SplashScreenState createState() => _SplashScreenState();
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-
   @override
   void initState() {
     super.initState();
     Timer(const Duration(seconds: 3), () {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => RoleSelectionScreen()),
+        MaterialPageRoute(builder: (_) => const RoleSelectionScreen()),
       );
     });
   }
@@ -26,64 +27,82 @@ class _SplashScreenState extends State<SplashScreen> {
       body: Container(
         width: double.infinity,
         decoration: const BoxDecoration(
+          // 🔹 Dark Blue Professional Gradient
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF1D2671), // deep blue
-              Color(0xFFC33764), // soft purple-pink
+              Color(0xFF1D2671), // Deep Dark Blue
+              Color(0xFF3949AB), // Professional Indigo/Blue
             ],
           ),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-
-            // Icon Circle
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.emoji_events,
-                size: 70,
-                color: Colors.white,
+            // 🔹 Animated Logo Container
+            TweenAnimationBuilder(
+              duration: const Duration(seconds: 2),
+              tween: Tween<double>(begin: 0, end: 1),
+              builder: (context, double value, child) {
+                return Opacity(
+                  opacity: value,
+                  child: Transform.scale(
+                    scale: value,
+                    child: child,
+                  ),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.all(25),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white.withOpacity(0.2), width: 2),
+                ),
+                child: const Icon(
+                  Icons.emoji_events_outlined,
+                  size: 85,
+                  color: Colors.white,
+                ),
               ),
             ),
 
-            const SizedBox(height: 25),
+            const SizedBox(height: 30),
 
-            // App Title
+            // 🔹 App Title
             const Text(
-              "Sports Gala",
+              "SPORTS GALA",
               style: TextStyle(
-                fontSize: 32,
+                fontSize: 38,
+                fontWeight: FontWeight.w900,
                 color: Colors.white,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.2,
+                letterSpacing: 2.5,
               ),
             ),
 
             const SizedBox(height: 8),
 
-            // Subtitle
             const Text(
-              "Management App",
+              "Ultimate Management System",
               style: TextStyle(
-                fontSize: 16,
-                color: Colors.white70,
-                letterSpacing: 1,
+                fontSize: 14,
+                color: Colors.white60,
+                letterSpacing: 1.2,
+                fontWeight: FontWeight.w300,
               ),
             ),
 
-            const SizedBox(height: 40),
+            const SizedBox(height: 60),
 
-            // Loading Indicator
-            const CircularProgressIndicator(
-              color: Colors.white,
-              strokeWidth: 2,
+            // 🔹 Clean Loader
+            const SizedBox(
+              width: 40,
+              height: 40,
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 3,
+              ),
             ),
           ],
         ),
